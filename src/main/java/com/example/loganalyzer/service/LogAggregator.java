@@ -80,10 +80,13 @@ public class LogAggregator {
     /**
      * Top N を設計の範囲に丸める(F-AGG-03 / F-AGG-04、03 9章)。
      *
+     * <p>画面側(PageController)が「実際に使われた件数」をフォームに表示し直すためにも使うため public にしている。
+     * 丸めルールをここ1箇所に集約し、画面とAPIで挙動がずれないようにする。</p>
+     *
      * @param topN 要求された件数。null の場合は既定値
      * @return 1〜100 に収めた件数
      */
-    private int resolveTopN(Integer topN) {
+    public int resolveTopN(Integer topN) {
         if (topN == null) {
             return DEFAULT_TOP_N;
         }
