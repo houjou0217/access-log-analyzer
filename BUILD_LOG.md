@@ -123,5 +123,27 @@ mvn test
 #### 申し送り(P2では対処せず、判断が必要な点)
 
 1. (対処済み)`.gitignore` の `*.log` により `sample-logs/access.log` が版管理対象外だった。03 8.1 はこれをテストデータに指定しており `SampleLogTest` が読むため、clone しただけの環境ではテストが失敗する状態だった。`!sample-logs/*.log` の除外解除を追加し、テストデータを版管理対象にした。
-2. 03 第4章は LogAggregator の入力を「List<LogEntry> と AnalyzeRequest」と定義しているが、AnalyzeResult には totalLines / skippedCount が必要で、これは List<LogEntry> だけからは算出できない。P3 着手時に「ParseResult を渡す」か「件数を別引数で渡す」かを決める必要がある。
+2. (P3で対処)03 第4章は LogAggregator の入力を「List<LogEntry> と AnalyzeRequest」と定義しているが、AnalyzeResult には totalLines / skippedCount が必要で、これは List<LogEntry> だけからは算出できない。P3 では案①「ParseResult を渡す」を採用した(試行2参照)。
+
+### 試行2: 2026-07-31(フェーズP3 / LogAggregator)
+
+- 実行コマンド: `mvn test`
+- 結果: 成功(BUILD SUCCESS / Tests run: 45, Failures: 0, Errors: 0, Skipped: 0)
+- エラー概要: 無し。初回実行で全件成功(コンパイルエラー・テスト失敗ともに発生せず)。
+- 実装内容: `service/LogAggregator.java`(F-AGG-01〜06、03 第4章)と `test/.../LogAggregatorTest.java`。
+  - `statusClassCounts`: status の百の位で区分(1xx も数える)。出現しなかった区分はキーを作らない。
+    テンプレート側が `${result.statusClassCounts['2xx']} ?: 0` と欠損を許容する書き方のため、この形で整合する。
+  - `statusCounts`: 個別コードを数値昇順(TreeMap)。
+  - `topPaths` / `topIps`: 件数降順 → 同数はキーの辞書順 → 先頭 topN。
+  - `timeBuckets`: 丸めた OffsetDateTime をキーに TreeMap で数えるため時刻昇順が保たれる。
+    件数0のバケットは出力しない。`widthPercent` は最大件数を100%として四捨五入。
+  - `errorEntries`: status >= 400 を時刻昇順。
+  - topN は null→10 / 1未満→1 / 100超→100 に丸める(03 9章)。bucketUnit は既存 `BucketUnit.fromString` に委譲し不正値は HOUR。
+- 設計判断: 集計器の入力は `LogParser.ParseResult` + `AnalyzeRequest` にした(申し送り2の案①)。
+  03 第4章の記述は「List<LogEntry> と AnalyzeRequest」だが、それだけでは totalLines / skippedCount を作れないため。
+  誤用を招く恐れがあるので、List を受ける版のオーバーロードは意図的に作っていない。
+- テスト結果の内訳(27件): サマリ1 / ステータス3 / 上位5 / 時間バケット7 / エラー行2 / エッジケース2 / サンプルログ7。
+  サンプルログの検証値: 2xx=16・3xx=3・4xx=4・5xx=2、個別コード9種(200が14件)、
+  上位パス首位 `/api/status`(5件)、上位IP首位 `203.0.113.5`(4件)、
+  時間帯 10時=11 / 11時=8 / 12時=4 / 13時=2(widthPercent 100 / 73)、エラー行6件。
 
