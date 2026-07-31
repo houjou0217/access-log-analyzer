@@ -166,3 +166,48 @@ mvn test
   JSON API では「読み取れない入力=空入力と同じ扱い」に寄せた。異なる扱いを望む場合は要指示。
 - テスト結果の内訳(12件): 解析結果のJSON返却4 / topN・bucketUnit処理5 / 常に200を返す3。
 
+### 試行4: 2026-07-31(フェーズP5 / PageController・画面結線)
+
+- 実行コマンド: `mvn test` → `mvn spring-boot:run`(失敗)→ `java -cp` 直接起動(成功)→ `mvn package` + `java -jar`(成功)
+- 結果: テストは成功(BUILD SUCCESS / Tests run: 71, Failures: 0, Errors: 0, Skipped: 0)。画面の動作確認も完了。
+- 実装内容: `controller/PageController.java`(F-UI-01/02、03 第6章 / 04)と `test/.../PageControllerTest.java`。
+  - `GET /` は入力画面を返す。モデル属性は渡さず、既定値(topN=10 / bucketUnit=HOUR)はテンプレートの
+    `${topN} ?: 10` と `${bucketUnit == null or ...}` の記述で満たす。
+  - `POST /analyze` は解析して同一テンプレートに `result` / `rawLog` / `topN` / `bucketUnit` を渡す(04 5章の属性名に合わせた)。
+  - フォームの topN は文字列で届くため、未入力・非数値は null にして既定10へフォールバックさせる(03 9章「非数値→10」)。
+  - 1〜100の丸めは `LogAggregator.resolveTopN` に委譲(画面とAPIで挙動を揃えるため private → public に変更)。
+    フォームには「実際に使われた値」を返すので、999を入力すると100が表示される。
+  - 既存テンプレート・CSSは変更していない(モデル属性名が一致していたため修正不要だった)。
+- テスト結果の内訳(14件): 入力画面2 / 結果表示6 / 時間帯別グラフ2 / エラー行1 / パラメータ丸め3。
+  テストは実テンプレートを描画して検証しているため、`#temporals.format` が実行時に動くことも確認できた
+  (BUILD_LOG 第4章の想定リスク1・4は解消。追加ライブラリは不要だった)。
+
+#### 発生した問題: `mvn spring-boot:run` が起動しない(環境固有)
+
+- エラー概要: `java.lang.ClassNotFoundException: com.example.loganalyzer.LoganalyzerApplication`
+  (`target/classes` にクラスは正しく生成されており、コンパイルは成功している)
+- 原因: プロジェクトパスに日本語(`デスクトップ`)が含まれることによる文字化け。
+  Mavenのログにも `\uFFFD\uFFFD\uFFFD\uFFFD` のような文字化けが出ており、
+  `spring-boot:run` が起動する別プロセスへ渡すクラスパスが壊れてクラスを解決できない。
+  `-Dspring-boot.run.fork=false` を付けても同じ結果だった。
+- 対処(いずれも動作確認済み): 次の2通りで起動できる。
+  1. `mvn package` してから `java -jar target/loganalyzer-0.0.1-SNAPSHOT.jar`(**推奨。最も簡単**)
+  2. `mvn dependency:build-classpath -Dmdep.outputFile=target/cp.txt` の後、
+     `java -cp "target/classes;<cp.txt の内容>" com.example.loganalyzer.LoganalyzerApplication`
+- 恒久対処の候補(未実施・要判断): プロジェクトを日本語を含まないパス(例 `C:\dev\log-analyzer`)へ移す。
+  IntelliJ から実行する場合はIDEが直接JVMを起動するため、この問題は起きない見込み。
+  SETUP.md 手順4 と README の起動コマンドは `mvn spring-boot:run` を案内しているため、P6で記述を見直す必要がある。
+
+#### 画面の動作確認(実際に起動して確認した内容)
+
+`java -jar` で起動し、`http://localhost:8080` に対して確認した結果:
+
+- `GET /`: 200。タイトル・textarea(rawLog)・topN・bucketUnit・「解析する」ボタンが表示され、
+  未送信時は結果セクションが描画されない。`/css/style.css` も 200(4265 bytes)で配信される。
+- `POST /analyze` に `sample-logs/access.log` を貼って送信: 200。
+  サマリ 総行数26・解析成功25・解析不能1、ステータス区分・個別コード表、上位パス(`/api/status`)・上位IP(`203.0.113.5`)、
+  時間帯別グラフ(ラベル `2026-07-30 10:00`〜`13:00`、バー幅 `width:100%` と `width:73%`)、
+  エラー行一覧(`10:20:11` / `/admin` / 403 / 503)がすべて表示された。入力したログ本文もテキストエリアに残る。
+- パラメータ: MINUTE指定で分単位ラベル(`10:15`)に変わる。topN=999→100、topN=abc→10、bucketUnit=DAY→HOUR がフォームに反映される。
+- 空のログを送信しても200で画面が返る(エラー画面にならない)。
+
