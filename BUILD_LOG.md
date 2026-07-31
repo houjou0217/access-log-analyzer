@@ -100,4 +100,28 @@ mvn test
 - 対処: (修正した内容・ファイル)
 ```
 
-（まだビルド未実施。最初の試行結果をここに記録していく）
+### 試行1: 2026-07-31(フェーズP2 / LogParser)
+
+- 実行コマンド: `mvn test`
+- 結果: 成功(BUILD SUCCESS / Tests run: 18, Failures: 0, Errors: 0, Skipped: 0)
+- エラー概要: テスト自体のエラーは無し。ただし実行前に「環境が未構築」という別の問題があった(下記)。
+- 事前に発生した問題: `java` / `mvn` がどちらも PATH に存在せず、`JAVA_HOME` も未設定だった(JDK・Maven が未インストール)。そのため `mvn test` を実行できなかった。
+- 原因: SETUP.md 手順1・2(JDK 21 / IntelliJ 同梱Maven)が未実施。雛型に `mvnw`(Maven Wrapper)も含まれていないため、Maven 無しでは実行できない状態だった。
+- 対処:
+  - JDK 21 を winget で導入: `winget install --id EclipseAdoptium.Temurin.21.JDK`
+    → `C:\Program Files\Eclipse Adoptium\jdk-21.0.12.8-hotspot`(openjdk 21.0.12 LTS)
+  - Maven は winget カタログに無かったため、Apache 公式の binary zip を利用者領域へ展開:
+    `%LOCALAPPDATA%\Programs\maven\apache-maven-3.9.9`(Apache Maven 3.9.9)
+  - ユーザー環境変数に `JAVA_HOME` と `%JAVA_HOME%\bin` / Maven の `bin` を追加(次回以降は `mvn` が直接使える)。
+- 実装内容: `service/LogParser.java`(F-PRS-01/02/03、03 第3章)と `test/.../LogParserTest.java`。
+  - 正規表現1本で9項目を捕捉(03 3.3)。日時は `dd/MMM/yyyy:HH:mm:ss Z` + `Locale.ENGLISH`(03 3.2)。
+  - 解析不能行は例外を投げずスキップして数える(03 3.3)。`parseLine` は `Optional<LogEntry>` を返す。
+  - パーサの戻り値として `LogParser.ParseResult`(entries / totalLines / parsedCount / skippedCount)を入れ子recordで定義。03 2.4 の AnalyzeResult が必要とする件数を運ぶための器で、新機能ではない。
+- テスト結果の内訳: ParseLineTest 5件 / DateTimeTest 3件 / SkipTest 8件 / SampleLogTest 2件。
+  サンプルログ(`sample-logs/access.log`)は 全26行・解析成功25件・スキップ1件 を検証。
+
+#### 申し送り(P2では対処せず、判断が必要な点)
+
+1. (対処済み)`.gitignore` の `*.log` により `sample-logs/access.log` が版管理対象外だった。03 8.1 はこれをテストデータに指定しており `SampleLogTest` が読むため、clone しただけの環境ではテストが失敗する状態だった。`!sample-logs/*.log` の除外解除を追加し、テストデータを版管理対象にした。
+2. 03 第4章は LogAggregator の入力を「List<LogEntry> と AnalyzeRequest」と定義しているが、AnalyzeResult には totalLines / skippedCount が必要で、これは List<LogEntry> だけからは算出できない。P3 着手時に「ParseResult を渡す」か「件数を別引数で渡す」かを決める必要がある。
+
