@@ -211,3 +211,57 @@ mvn test
 - パラメータ: MINUTE指定で分単位ラベル(`10:15`)に変わる。topN=999→100、topN=abc→10、bucketUnit=DAY→HOUR がフォームに反映される。
 - 空のログを送信しても200で画面が返る(エラー画面にならない)。
 
+### 試行5: 2026-07-31(フェーズP6 / 仕上げ・最終確認)
+
+- 実行コマンド: `mvn test` → `mvn package` → `java -jar target/loganalyzer-0.0.1-SNAPSHOT.jar`
+- 結果: 成功(BUILD SUCCESS / Tests run: 72, Failures: 0, Errors: 0, Skipped: 0)。画面・APIの最終動作確認も完了。
+
+#### 設計04とのずれを1件修正(F-UI-04)
+
+- 内容: 04 4.3 は「エラー行一覧の状態は4xxを橙、5xxを赤の文字色」と定めているが、
+  状態セルに色クラスが付いておらず、CSSにも該当の定義が無かった(色が付いていなかった)。
+- 背景: 04 第5章のHTML骨格(参考実装)は `<td th:text="${e.status}"></td>` となっており、
+  4.3 の要求(色分け)が第5章・第6章に反映されていなかった。書内の不整合。
+- 対処: 4.3 を要求仕様として採用し、次のとおり実装した。色は 04 第2章で
+  4xx用 `--warn-fg`(#b45309)・5xx用 `--err-fg`(#c02626)が既に定義済みだったのでそれを使った。
+  - `index.html`: `<td class="status-cell" th:classappend="${e.status >= 500} ? 'err' : 'warn'" ...>`
+  - `style.css`: `.status-cell.warn { color: var(--warn-fg); }` / `.status-cell.err { color: var(--err-fg); }`
+  - クラス名は既存の `.status-card.warn / .err` の命名に合わせた(クラス名自体は04に記載が無いため命名のみ実装側の判断)。
+  - `PageControllerTest` に色分けの確認テストを追加(全体72件)。
+- F-UI-03(時間帯別グラフ)はずれ無し。HTMLは04 第5章のとおり、CSSも第6章のとおり(`bar-label` 120px 等)実装済みだった。
+  なお 04 4.3 は時刻ラベル幅を「44px」と書いているが、第6章のCSSは `width:120px` で、
+  ラベルが `2026-07-30 10:00` 形式(16文字)のため44pxでは表示できない。
+  より具体的な第6章のCSS定義を正として120pxを維持した(変更なし)。
+
+#### README.md の整備
+
+- 動かし方を実際に動作する手順(`mvn package` → `java -jar`)に修正した。
+  従来の記述 `./mvnw spring-boot:run` は Maven Wrapper が同梱されていないため実行できず、
+  `mvn spring-boot:run` も日本語パスの問題(試行4)で失敗するため、注意書きと回避策を明記した。
+- 画面キャプチャの入れ方(`docs/screenshots/` に置いてコメントを外す手順)、REST APIの使い方と
+  パラメータ表、工夫した点(壊れた行を落とさない設計・ロジックの集約・層分離・テスト72件・表示用値のサーバー側計算)、
+  フェーズ実績、ドキュメント一覧、プロジェクト構成を追記した。
+- `docs/screenshots/.gitkeep` を追加(キャプチャ置き場)。
+
+#### 最終動作確認(java -jar で起動して確認)
+
+- `GET /` 200。`POST /analyze` 200 でサマリ(26/25/1)・ステータス区分・上位・グラフ(`width:100%` と `width:73%`)・
+  エラー行(`status-cell warn` と `status-cell err` の両方が出力される)を確認。`/css/style.css` に `status-cell` の定義も反映済み。
+- `POST /api/analyze` 200。totalLines=26 / parsed=25 / skipped=1、2xx=16・3xx=3・4xx=4・5xx=2、
+  topPaths先頭 `/api/status`(5件)、topIps先頭 `203.0.113.5`(4件)、timeBuckets 4個(先頭 10:00 / 11件 / 100%)、
+  errorEntries 6件(先頭 403 `/admin`)。テストの期待値と実機の結果が一致した。
+- 確認作業中の気づき(アプリの不具合ではない): PowerShell で `Get-Content -Raw` の戻り値をそのまま
+  `ConvertTo-Json` すると、文字列ではなくオブジェクト(`{"value":...}`)としてシリアライズされ、
+  `rawLog` の型が合わずに解析結果が空になる。`[string]` にキャストすれば正しく解析される。
+  このとき API は(設計どおり)400ではなく200 + 空の結果を返すため、
+  **クライアント側の型ミスが気づきにくい**という副作用がある。P4の判断(常に200)の裏返しなので、
+  400を返す方針に変えたい場合は `ApiController.handleUnreadableRequestBody` の1箇所を差し替えればよい。
+
+## 7. 最終状態(P6完了時点)
+
+- 実装済み機能ID: F-FND-01/02、F-PRS-01〜03、F-AGG-01〜06、F-API-01/02、F-UI-01〜04(**全17件**)。
+- テスト: 72件すべて成功(LogParser 18 / LogAggregator 27 / ApiController 12 / PageController 15)。
+- 未確定事項: 無し。設計書(01/02/03/04)の範囲は実装済み。
+- 残る運用上の課題: 日本語を含むパスでは `mvn spring-boot:run` が使えない(回避策あり・READMEに明記)。
+  恒久対処はプロジェクトを日本語を含まないパスへ移すこと(未実施・要判断)。
+
