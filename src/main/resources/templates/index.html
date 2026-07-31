@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Access Log Analyzer</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div class="container">
+    <header class="header">
+        <h1>Access Log Analyzer</h1>
+        <p class="sub">Apache / Nginx アクセスログを解析して集計します</p>
+    </header>
+
+    <form class="card input-area" method="post" action="/analyze">
+        <label class="field-label">ログ本文を貼り付け</label>
+        <textarea name="rawLog" class="log-input" rows="8"
+                  placeholder="192.168.0.10 - - [30/Jul/2026:10:15:32 +0900] &quot;GET /index.html HTTP/1.1&quot; 200 1043 &quot;-&quot; &quot;Mozilla/5.0&quot;"
+                  th:text="${rawLog}"></textarea>
+        <div class="params">
+            <div class="param">
+                <label>上位件数 (Top N)</label>
+                <input type="number" name="topN" min="1" max="100" th:value="${topN} ?: 10">
+            </div>
+            <div class="param">
+                <label>時間バケット</label>
+                <select name="bucketUnit">
+                    <option value="HOUR" th:selected="${bucketUnit == null or bucketUnit == 'HOUR'}">1時間</option>
+                    <option value="TEN_MIN" th:selected="${bucketUnit == 'TEN_MIN'}">10分</option>
+                    <option value="MINUTE" th:selected="${bucketUnit == 'MINUTE'}">1分</option>
+                </select>
+            </div>
+            <button type="submit" class="btn-primary">解析する</button>
+        </div>
+    </form>
+
+    <div th:if="${result != null}" class="results">
+
+        <div class="metric-row">
+            <div class="metric">
+                <span class="metric-label">総行数</span>
+                <span class="metric-value" th:text="${result.totalLines}">0</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">解析成功</span>
+                <span class="metric-value ok" th:text="${result.parsedCount}">0</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">解析不能</span>
+                <span class="metric-value err" th:text="${result.skippedCount}">0</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>ステータスコード別</h2>
+            <div class="status-row">
+                <div class="status-card ok">
+                    <span>2xx 成功</span>
+                    <b th:text="${result.statusClassCounts['2xx']} ?: 0">0</b>
+                </div>
+                <div class="status-card info">
+                    <span>3xx リダイレクト</span>
+                    <b th:text="${result.statusClassCounts['3xx']} ?: 0">0</b>
+                </div>
+                <div class="status-card warn">
+                    <span>4xx クライアント</span>
+                    <b th:text="${result.statusClassCounts['4xx']} ?: 0">0</b>
+                </div>
+                <div class="status-card err">
+                    <span>5xx サーバー</span>
+                    <b th:text="${result.statusClassCounts['5xx']} ?: 0">0</b>
+                </div>
+            </div>
+            <table class="data-table">
+                <tr><th>コード</th><th class="num">件数</th></tr>
+                <tr th:each="item : ${result.statusCounts}">
+                    <td th:text="${item.key}"></td>
+                    <td class="num" th:text="${item.count}"></td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="two-col">
+            <div class="card">
+                <h2>上位パス</h2>
+                <table class="data-table">
+                    <tr><th>パス</th><th class="num">件数</th></tr>
+                    <tr th:each="item : ${result.topPaths}">
+                        <td class="mono" th:text="${item.key}"></td>
+                        <td class="num" th:text="${item.count}"></td>
+                    </tr>
+                </table>
+            </div>
+            <div class="card">
+                <h2>上位IP</h2>
+                <table class="data-table">
+                    <tr><th>IP</th><th class="num">件数</th></tr>
+                    <tr th:each="item : ${result.topIps}">
+                        <td class="mono" th:text="${item.key}"></td>
+                        <td class="num" th:text="${item.count}"></td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>時間帯別リクエスト数</h2>
+            <div class="bar-chart">
+                <div class="bar-row" th:each="b : ${result.timeBuckets}">
+                    <span class="bar-label mono" th:text="${b.bucketStart}"></span>
+                    <div class="bar-track">
+                        <div class="bar-fill" th:style="'width:' + ${b.widthPercent} + '%'"></div>
+                    </div>
+                    <span class="bar-count" th:text="${b.count}"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2 class="err-title">エラー行(4xx / 5xx)</h2>
+            <table class="data-table mono">
+                <tr><th>時刻</th><th>IP</th><th>状態</th><th>パス</th></tr>
+                <tr th:each="e : ${result.errorEntries}">
+                    <td th:text="${#temporals.format(e.dateTime, 'HH:mm:ss')}"></td>
+                    <td th:text="${e.ip}"></td>
+                    <td th:text="${e.status}"></td>
+                    <td th:text="${e.path}"></td>
+                </tr>
+            </table>
+        </div>
+
+    </div>
+</div>
+</body>
+</html>

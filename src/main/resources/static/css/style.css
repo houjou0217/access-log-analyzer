@@ -1,0 +1,272 @@
+:root {
+    --bg: #f5f6f8;
+    --card: #ffffff;
+    --border: #e2e5ea;
+    --text: #1f2430;
+    --muted: #6b7280;
+    --accent: #2563eb;
+    --ok-bg: #e7f6ec;
+    --ok-fg: #1a7f37;
+    --info-bg: #e6f0fb;
+    --info-fg: #1d4ed8;
+    --warn-bg: #fdf1e3;
+    --warn-fg: #b45309;
+    --err-bg: #fdecec;
+    --err-fg: #c02626;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-size: 13px;
+}
+
+.container {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 24px 16px;
+}
+
+.header {
+    border-bottom: 2px solid var(--border);
+    padding-bottom: 10px;
+    margin-bottom: 16px;
+}
+
+.header h1 {
+    font-size: 22px;
+    margin: 0;
+}
+
+.header .sub {
+    color: var(--muted);
+    font-size: 12px;
+    margin: 4px 0 0;
+}
+
+.card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 16px;
+}
+
+.card h2 {
+    font-size: 16px;
+    margin: 0 0 10px;
+}
+
+.mono {
+    font-family: "SFMono-Regular", Consolas, "Courier New", monospace;
+}
+
+.field-label {
+    display: block;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 6px;
+}
+
+.log-input {
+    width: 100%;
+    font-family: "SFMono-Regular", Consolas, "Courier New", monospace;
+    font-size: 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px;
+    resize: vertical;
+}
+
+.params {
+    display: flex;
+    gap: 12px;
+    align-items: end;
+    flex-wrap: wrap;
+    margin-top: 10px;
+}
+
+.params label {
+    display: block;
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 3px;
+}
+
+.params input,
+.params select {
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 13px;
+}
+
+.btn-primary {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 20px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.metric-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.metric {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+}
+
+.metric-label {
+    display: block;
+    font-size: 11px;
+    color: var(--muted);
+}
+
+.metric-value {
+    font-size: 22px;
+    font-weight: 700;
+}
+
+.metric-value.ok {
+    color: var(--ok-fg);
+}
+
+.metric-value.err {
+    color: var(--err-fg);
+}
+
+.status-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.status-card {
+    border-radius: 8px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+}
+
+.status-card span {
+    font-size: 11px;
+}
+
+.status-card b {
+    font-size: 18px;
+}
+
+.status-card.ok {
+    background: var(--ok-bg);
+    color: var(--ok-fg);
+}
+
+.status-card.info {
+    background: var(--info-bg);
+    color: var(--info-fg);
+}
+
+.status-card.warn {
+    background: var(--warn-bg);
+    color: var(--warn-fg);
+}
+
+.status-card.err {
+    background: var(--err-bg);
+    color: var(--err-fg);
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+
+.data-table th {
+    text-align: left;
+    color: var(--muted);
+    font-weight: 500;
+    border-bottom: 1px solid var(--border);
+    padding: 4px 0;
+}
+
+.data-table td {
+    padding: 4px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.data-table .num {
+    text-align: right;
+}
+
+.two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.bar-chart {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.bar-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.bar-label {
+    font-size: 11px;
+    width: 120px;
+    color: var(--muted);
+}
+
+.bar-track {
+    flex: 1;
+    background: var(--bg);
+    border-radius: 3px;
+    height: 16px;
+}
+
+.bar-fill {
+    height: 16px;
+    background: var(--accent);
+    border-radius: 3px;
+}
+
+.bar-count {
+    font-size: 11px;
+    width: 36px;
+    text-align: right;
+}
+
+.err-title {
+    color: var(--err-fg);
+}
+
+@media (max-width: 640px) {
+    .two-col {
+        grid-template-columns: 1fr;
+    }
+    .status-row {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}

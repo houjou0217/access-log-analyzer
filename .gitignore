@@ -1,0 +1,36 @@
+# Maven ビルド成果物
+target/
+
+# Java コンパイル
+*.class
+
+# ログ
+*.log
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# Eclipse / VS Code(使う場合)
+.classpath
+.project
+.settings/
+.vscode/
+
+# Spring Boot
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 秘匿情報
+.env
+.env.*
+application-local.properties
+application-secret.properties
