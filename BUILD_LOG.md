@@ -147,3 +147,22 @@ mvn test
   上位パス首位 `/api/status`(5件)、上位IP首位 `203.0.113.5`(4件)、
   時間帯 10時=11 / 11時=8 / 12時=4 / 13時=2(widthPercent 100 / 73)、エラー行6件。
 
+### 試行3: 2026-07-31(フェーズP4 / ApiController)
+
+- 実行コマンド: `mvn test`
+- 結果: 成功(BUILD SUCCESS / Tests run: 57, Failures: 0, Errors: 0, Skipped: 0)
+- エラー概要: 無し。初回実行で全件成功。
+- 実装内容: `controller/ApiController.java`(F-API-01/02、03 第5章)と `test/.../ApiControllerTest.java`(MockMvc)。
+  - `POST /api/analyze`。`AnalyzeRequest` を受け、LogParser → LogAggregator を呼んで `AnalyzeResult` をJSONで返す。
+  - topN の既定10・範囲(1〜100)への丸め、bucketUnit 不正値の HOUR フォールバックは
+    P3 の LogAggregator に実装済みのため、Controller からは委譲するだけにした(ロジックの二重化を避ける)。
+  - `@RequestBody(required = false)` とし、ボディ無しでも 200 で空の結果(totalLines=0)を返す(03 5.1)。
+- 設計判断(要確認): 03 5.1 の「常に HTTP 200 を返す」を満たすため、
+  `HttpMessageNotReadableException` の `@ExceptionHandler` をこのController内に置き、
+  JSONが壊れている場合・topN に数値でない値が来た場合も 200 + 空の結果を返すようにした。
+  Spring の既定ではこれらは 400 になるため、設計の「常に200」と矛盾する。
+  影響をAPIに限定するため `@ControllerAdvice`(全体適用)にはしていない。
+  なお 03 9章の「非数値→10」はUIのフォーム入力を想定した記述と解釈し、
+  JSON API では「読み取れない入力=空入力と同じ扱い」に寄せた。異なる扱いを望む場合は要指示。
+- テスト結果の内訳(12件): 解析結果のJSON返却4 / topN・bucketUnit処理5 / 常に200を返す3。
+
