@@ -6,6 +6,8 @@ target/
 
 # ログ
 *.log
+# ただしテストデータ(03 8.1 で指定)は版管理する
+!sample-logs/*.log
 
 # IntelliJ IDEA
 .idea/
