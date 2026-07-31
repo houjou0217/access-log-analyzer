@@ -124,7 +124,9 @@
                 <tr th:each="e : ${result.errorEntries}">
                     <td th:text="${#temporals.format(e.dateTime, 'HH:mm:ss')}"></td>
                     <td th:text="${e.ip}"></td>
-                    <td th:text="${e.status}"></td>
+                    <td class="status-cell"
+                        th:classappend="${e.status >= 500} ? 'err' : 'warn'"
+                        th:text="${e.status}"></td>
                     <td th:text="${e.path}"></td>
                 </tr>
             </table>

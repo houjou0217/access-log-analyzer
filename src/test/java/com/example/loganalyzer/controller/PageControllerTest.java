@@ -231,6 +231,20 @@ class PageControllerTest {
                     .andExpect(content().string(containsString("404")))
                     .andExpect(content().string(containsString("/login")));
         }
+
+        @Test
+        @DisplayName("状態セルは 4xx が warn(橙)・5xx が err(赤)のクラスになる(04 4.3)")
+        void colorsStatusCellByClass() throws Exception {
+            String log5xx = "10.0.0.1 - - [30/Jul/2026:10:50:00 +0900] "
+                    + "\"GET /api/status HTTP/1.1\" 500 620 \"-\" \"Go-http-client/2.0\"";
+            String rawLog = String.join("\n", VALID_LINE_1, VALID_LINE_2, log5xx);
+
+            mockMvc.perform(post("/analyze").param("rawLog", rawLog))
+                    .andExpect(status().isOk())
+                    // 404 の行は warn、500 の行は err
+                    .andExpect(content().string(containsString("class=\"status-cell warn\"")))
+                    .andExpect(content().string(containsString("class=\"status-cell err\"")));
+        }
     }
 
     @Nested

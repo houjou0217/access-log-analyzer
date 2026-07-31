@@ -262,6 +262,15 @@ body {
     color: var(--err-fg);
 }
 
+/* エラー行一覧の状態セル: 4xx=橙 / 5xx=赤(04_ui_design.md 4.3 / 第2章) */
+.status-cell.warn {
+    color: var(--warn-fg);
+}
+
+.status-cell.err {
+    color: var(--err-fg);
+}
+
 @media (max-width: 640px) {
     .two-col {
         grid-template-columns: 1fr;
